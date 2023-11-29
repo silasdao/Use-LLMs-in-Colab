@@ -43,8 +43,7 @@ def _get_args():
     parser.add_argument("--server-name", type=str, default="127.0.0.1",
                         help="Demo server name.")
 
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 def _load_model_tokenizer(args):
@@ -54,11 +53,7 @@ def _load_model_tokenizer(args):
         model_dir, trust_remote_code=True, resume_download=True,
     )
 
-    if args.cpu_only:
-        device_map = "cpu"
-    else:
-        device_map = "auto"
-
+    device_map = "cpu" if args.cpu_only else "auto"
     model = AutoModelForCausalLM.from_pretrained(
         model_dir,
         device_map=device_map,
@@ -80,26 +75,26 @@ def _parse_text(text):
         if "```" in line:
             count += 1
             items = line.split("`")
+            lines[i] = (
+                f'<pre><code class="language-{items[-1]}">'
+                if count % 2 == 1
+                else "<br></code></pre>"
+            )
+        elif i > 0:
             if count % 2 == 1:
-                lines[i] = f'<pre><code class="language-{items[-1]}">'
-            else:
-                lines[i] = f"<br></code></pre>"
-        else:
-            if i > 0:
-                if count % 2 == 1:
-                    line = line.replace("`", r"\`")
-                    line = line.replace("<", "&lt;")
-                    line = line.replace(">", "&gt;")
-                    line = line.replace(" ", "&nbsp;")
-                    line = line.replace("*", "&ast;")
-                    line = line.replace("_", "&lowbar;")
-                    line = line.replace("-", "&#45;")
-                    line = line.replace(".", "&#46;")
-                    line = line.replace("!", "&#33;")
-                    line = line.replace("(", "&#40;")
-                    line = line.replace(")", "&#41;")
-                    line = line.replace("$", "&#36;")
-                lines[i] = "<br>" + line
+                line = line.replace("`", r"\`")
+                line = line.replace("<", "&lt;")
+                line = line.replace(">", "&gt;")
+                line = line.replace(" ", "&nbsp;")
+                line = line.replace("*", "&ast;")
+                line = line.replace("_", "&lowbar;")
+                line = line.replace("-", "&#45;")
+                line = line.replace(".", "&#46;")
+                line = line.replace("!", "&#33;")
+                line = line.replace("(", "&#40;")
+                line = line.replace(")", "&#41;")
+                line = line.replace("$", "&#36;")
+            lines[i] = f"<br>{line}"
     text = "".join(lines)
     return text
 
@@ -112,7 +107,7 @@ def _launch_demo(args, model, tokenizer):
     def predict(_chatbot, task_history):
         chat_query = _chatbot[-1][0]
         query = task_history[-1][0]
-        print("User: " + _parse_text(query))
+        print(f"User: {_parse_text(query)}")
         history_cp = copy.deepcopy(task_history)
         full_response = ""
 
@@ -149,7 +144,7 @@ def _launch_demo(args, model, tokenizer):
         full_response = _parse_text(response)
 
         task_history[-1] = (query, full_response)
-        print("Qwen-VL-Chat: " + _parse_text(full_response))
+        print(f"Qwen-VL-Chat: {_parse_text(full_response)}")
         task_history = task_history[-10:]
         return _chatbot
 
